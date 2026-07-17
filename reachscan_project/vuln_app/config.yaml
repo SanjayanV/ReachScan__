@@ -1,0 +1,7 @@
+# config.yaml — Sample app configuration
+# ⚠️ This file is parsed by yaml.load() without SafeLoader (CVE-2020-14343)
+
+db_host: localhost
+db_port: 5432
+secret_key: "demo-secret-do-not-use-in-prod"
+debug: true

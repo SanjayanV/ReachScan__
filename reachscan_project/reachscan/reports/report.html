@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReachScan — Reachability Analysis Report</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+:root{
+--bg:#06080d;--surface:rgba(17,19,26,0.85);--surface2:rgba(26,29,38,0.9);
+--glass:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
+--text:#e8eaf0;--text-dim:#8892a8;--text-faint:#4a5268;
+--accent:#6c8cff;--accent2:#a78bfa;--accent-glow:rgba(108,140,255,0.12);
+--critical:#ff4d6a;--critical-bg:rgba(255,77,106,0.08);--critical-border:rgba(255,77,106,0.2);
+--high:#ff8c42;--high-bg:rgba(255,140,66,0.08);--high-border:rgba(255,140,66,0.2);
+--medium:#ffb938;--medium-bg:rgba(255,185,56,0.08);--medium-border:rgba(255,185,56,0.2);
+--low:#34d399;--low-bg:rgba(52,211,153,0.08);--low-border:rgba(52,211,153,0.2);
+--unknown:#8892a8;--radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 20%,rgba(108,140,255,0.04) 0%,transparent 50%),radial-gradient(circle at 70% 80%,rgba(167,139,250,0.03) 0%,transparent 50%);z-index:0;pointer-events:none}
+.header{position:sticky;top:0;z-index:100;background:rgba(6,8,13,0.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:20px 40px;display:flex;align-items:center;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 20px rgba(108,140,255,0.3)}
+.header-title h1{font-size:18px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header-title p{font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace}
+.header-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);text-align:right}
+.container{max-width:1200px;margin:0 auto;padding:32px 24px;position:relative;z-index:1}
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all 0.3s ease;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--radius) var(--radius) 0 0}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.stat-card .stat-number{font-size:40px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:8px}
+.stat-card .stat-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.stat-card.danger::before{background:linear-gradient(90deg,var(--critical),transparent)}
+.stat-card.danger .stat-number{color:var(--critical)}
+.stat-card.safe::before{background:linear-gradient(90deg,var(--low),transparent)}
+.stat-card.safe .stat-number{color:var(--low)}
+.stat-card.info::before{background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-card.info .stat-number{color:var(--accent)}
+.stat-card.warn::before{background:linear-gradient(90deg,var(--medium),transparent)}
+.stat-card.warn .stat-number{color:var(--medium)}
+/* Toolbar */
+.toolbar{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center}
+.search-box{flex:1;min-width:200px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s}
+.search-box:focus{border-color:var(--accent)}
+.search-box::placeholder{color:var(--text-faint)}
+.filter-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif}
+.filter-btn:hover,.filter-btn.active{background:var(--accent-glow);border-color:rgba(108,140,255,0.3);color:var(--accent)}
+.filter-btn.active-critical{border-color:var(--critical-border);color:var(--critical);background:var(--critical-bg)}
+.filter-btn.active-safe{border-color:var(--low-border);color:var(--low);background:var(--low-bg)}
+/* Section Title */
+.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin:32px 0 16px;display:flex;align-items:center;gap:12px}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent)}
+/* Vuln Cards */
+.vuln-list{display:flex;flex-direction:column;gap:12px}
+.vuln-card{background:var(--surface);backdrop-filter:blur(12px);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:all 0.3s ease}
+.vuln-card:hover{border-color:var(--border2);box-shadow:0 4px 24px rgba(0,0,0,0.2)}
+.vuln-card.reachable{border-left:3px solid var(--critical)}
+.vuln-card.unreachable{border-left:3px solid var(--low);opacity:0.8}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;user-select:none;flex-wrap:wrap;background:var(--glass)}
+.card-header:hover{background:rgba(255,255,255,0.02)}
+.card-left,.card-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cve-badge{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-glow);border:1px solid rgba(108,140,255,0.15);padding:4px 12px;border-radius:8px}
+.package-name{font-size:14px;font-weight:600}
+.badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;border:1px solid}
+.sev-critical{background:var(--critical-bg);color:var(--critical);border-color:var(--critical-border)}
+.sev-high{background:var(--high-bg);color:var(--high);border-color:var(--high-border)}
+.sev-medium{background:var(--medium-bg);color:var(--medium);border-color:var(--medium-border)}
+.sev-low{background:var(--low-bg);color:var(--low);border-color:var(--low-border)}
+.sev-unknown{color:var(--unknown);border-color:var(--border)}
+.status-reach{background:var(--critical-bg);color:var(--critical);border-color:var(--critical-border)}
+.status-unreach{background:var(--low-bg);color:var(--low);border-color:var(--low-border)}
+.expand-icon{color:var(--text-faint);font-size:18px;transition:transform 0.3s;margin-left:8px}
+.vuln-card.expanded .expand-icon{transform:rotate(180deg)}
+.card-body{max-height:0;overflow:hidden;transition:max-height 0.4s ease}
+.vuln-card.expanded .card-body{max-height:600px}
+.card-body-inner{padding:16px 20px;display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--border)}
+.summary{font-size:13px;color:var(--text-dim);line-height:1.6}
+.detail-row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.detail-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;min-width:120px;padding-top:3px}
+.detail-value{display:flex;gap:6px;flex-wrap:wrap}
+.detail-value code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:6px;color:var(--text-dim)}
+/* Paths */
+.paths-box{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.paths-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-faint);font-weight:700;margin-bottom:10px}
+.path-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.path-node{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2)}
+.path-node.entry{background:rgba(108,140,255,0.1);border-color:rgba(108,140,255,0.25);color:var(--accent)}
+.path-node.sink{background:var(--critical-bg);border-color:var(--critical-border);color:var(--critical)}
+.path-node.mid{background:var(--glass);color:var(--text-dim)}
+.path-arrow{color:var(--text-faint);font-size:13px;font-family:'JetBrains Mono',monospace}
+.fix-hint{font-size:12px;color:var(--low);background:var(--low-bg);border:1px solid var(--low-border);padding:8px 14px;border-radius:8px}
+.ref-link{font-size:11px;color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace}
+.ref-link:hover{text-decoration:underline}
+/* Call Graph */
+.graph-section{margin:40px 0}
+.graph-container{background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
+.graph-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.graph-header h3{font-size:14px;font-weight:700}
+.graph-legend{display:flex;gap:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+#callgraph{width:100%;height:500px;display:block}
+.graph-node text{font-family:'Inter',sans-serif;font-size:11px;font-weight:600}
+/* Footer */
+.footer{text-align:center;padding:40px;font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);margin-top:60px}
+.no-vulns{color:var(--low);padding:20px 0}
+/* Print */
+@media print{body{background:#fff;color:#111}.header,.toolbar,.graph-section,.footer{display:none}.stat-card,.vuln-card{break-inside:avoid;border:1px solid #ddd;background:#fff}.card-body{max-height:none!important}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-left">
+    <div class="logo">RS</div>
+    <div class="header-title">
+      <h1>ReachScan — Reachability Analysis</h1>
+      <p>/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app</p>
+    </div>
+  </div>
+  <div class="header-meta">Generated: 2026-05-07 09:02:38<br>Engine: ReachScan v2.0</div>
+</header>
+<div class="container">
+  <div class="stats-grid">
+    <div class="stat-card info"><div class="stat-number" data-count="26">0</div><div class="stat-label">CVEs Detected</div></div>
+    <div class="stat-card danger"><div class="stat-number" data-count="25">0</div><div class="stat-label">Reachable — Act Now</div></div>
+    <div class="stat-card safe"><div class="stat-number" data-count="1">0</div><div class="stat-label">Unreachable — Safe</div></div>
+    <div class="stat-card warn"><div class="stat-number data-text" data-text="4%">—</div><div class="stat-label">Alert Reduction</div></div>
+  </div>
+  <div class="toolbar">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search by CVE, package, or keyword...">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-filter="reachable" onclick="setFilter('reachable',this)">🔴 Reachable</button>
+    <button class="filter-btn" data-filter="unreachable" onclick="setFilter('unreachable',this)">✅ Unreachable</button>
+    <button class="filter-btn" data-filter="critical" onclick="setFilter('critical',this)">Critical</button>
+    <button class="filter-btn" data-filter="high" onclick="setFilter('high',this)">High</button>
+  </div>
+  <div class="section-title">🔴 Reachable Vulnerabilities — Immediate Action Required</div><div class="vuln-list">
+    <div class="vuln-card reachable" data-severity="critical" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2020-14343</span>
+          <span class="package-name">PyYAML</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-critical">CRITICAL</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Improper Input Validation in PyYAML</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>yaml.full_load</code><code>yaml.unsafe_load</code><code>yaml.load</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>9.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2020-14343" target="_blank" class="ref-link">CVE-2020-14343</a> · <a href="https://github.com/SeldonIO/seldon-core/issues/2252" target="_blank" class="ref-link">2252</a> · <a href="https://github.com/yaml/pyyaml/issues/420" target="_blank" class="ref-link">420</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>PyYAML ≥ 5.4</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="critical" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-50447</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-critical">CRITICAL</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Arbitrary Code Execution in Pillow</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>9.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2023-50447" target="_blank" class="ref-link">CVE-2023-50447</a> · <a href="https://github.com/python-pillow/Pillow/commit/45c726fd4daa63236a8f3653530f297dc87b160a" target="_blank" class="ref-link">45c726fd4daa63236a8f3653530f29</a> · <a href="https://devhub.checkmarx.com/cve-details/CVE-2023-50447" target="_blank" class="ref-link">CVE-2023-50447</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 10.2.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="critical" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2022-22817</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-critical">CRITICAL</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Arbitrary expression injection in Pillow</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>9.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2022-22817" target="_blank" class="ref-link">CVE-2022-22817</a> · <a href="https://github.com/python-pillow/Pillow/commit/8531b01d6cdf0b70f256f93092caa2a5d91afc11" target="_blank" class="ref-link">8531b01d6cdf0b70f256f93092caa2</a> · <a href="https://github.com/advisories/GHSA-8vj2-vxx3-667w" target="_blank" class="ref-link">GHSA-8vj2-vxx3-667w</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 9.0.1</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2020-14343</span>
+          <span class="package-name">PyYAML</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>yaml.full_load</code><code>yaml.unsafe_load</code><code>yaml.load</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://bugzilla.redhat.com/show_bug.cgi?id=1860466" target="_blank" class="ref-link">show_bug.cgi?id=1860466</a> · <a href="https://github.com/advisories/GHSA-8q59-q68h-6hv4" target="_blank" class="ref-link">GHSA-8q59-q68h-6hv4</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="load_config">load_config</span><span class="path-arrow">→</span><span class="path-node sink" title="yaml.load">load</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>PyYAML ≥ 5.4</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-28219</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Pillow buffer overflow vulnerability</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2024-28219" target="_blank" class="ref-link">CVE-2024-28219</a> · <a href="https://github.com/python-pillow/Pillow/commit/2a93aba5cfcf6e241ab4f9392c13e3b74032c061" target="_blank" class="ref-link">2a93aba5cfcf6e241ab4f9392c13e3</a> · <a href="https://github.com/python-pillow/Pillow" target="_blank" class="ref-link">Pillow</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 10.3.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-44271</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Pillow Denial of Service vulnerability</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2023-44271" target="_blank" class="ref-link">CVE-2023-44271</a> · <a href="https://github.com/python-pillow/Pillow/pull/7244" target="_blank" class="ref-link">7244</a> · <a href="https://github.com/python-pillow/Pillow/commit/1fe1bb49c452b0318cad12ea9d97c3bef188e9a7" target="_blank" class="ref-link">1fe1bb49c452b0318cad12ea9d97c3</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 10.0.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2022-24303</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Path traversal in Pillow</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2022-24303" target="_blank" class="ref-link">CVE-2022-24303</a> · <a href="https://github.com/python-pillow/Pillow/pull/3450" target="_blank" class="ref-link">3450</a> · <a href="https://github.com/python-pillow/Pillow/pull/6010" target="_blank" class="ref-link">6010</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 9.0.1</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-4863</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">libwebp: OOB write in BuildHuffmanTable</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2023-4863" target="_blank" class="ref-link">CVE-2023-4863</a> · <a href="https://github.com/qnighy/libwebp-sys2-rs/pull/21" target="_blank" class="ref-link">21</a> · <a href="https://github.com/python-pillow/Pillow/pull/7395" target="_blank" class="ref-link">7395</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 0.1.8</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2022-45198</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Pillow vulnerable to Data Amplification attack.</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.5/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2022-45198" target="_blank" class="ref-link">CVE-2022-45198</a> · <a href="https://github.com/python-pillow/Pillow/pull/6402" target="_blank" class="ref-link">6402</a> · <a href="https://github.com/python-pillow/Pillow/pull/6402/commits/c9f1b35e981075110a23487a8d4a6cbb59a588ea" target="_blank" class="ref-link">c9f1b35e981075110a23487a8d4a6c</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 9.2.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2026-42310</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Pillow has a PDF Parsing Trailer Infinite Loop (DoS)</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/python-pillow/Pillow/security/advisories/GHSA-r73j-pqj5-w3x7" target="_blank" class="ref-link">GHSA-r73j-pqj5-w3x7</a> · <a href="https://github.com/python-pillow/Pillow/pull/9519" target="_blank" class="ref-link">9519</a> · <a href="https://github.com/python-pillow/Pillow" target="_blank" class="ref-link">Pillow</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 12.2.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2026-42308</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Pillow has an integer overflow when processing fonts</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/python-pillow/Pillow/security/advisories/GHSA-wjx4-4jcj-g98j" target="_blank" class="ref-link">GHSA-wjx4-4jcj-g98j</a> · <a href="https://github.com/python-pillow/Pillow" target="_blank" class="ref-link">Pillow</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 12.2.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2022-24303</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://pillow.readthedocs.io/en/stable/releasenotes/9.0.1.html#security" target="_blank" class="ref-link">9.0.1.html#security</a> · <a href="https://github.com/python-pillow/Pillow/pull/3450" target="_blank" class="ref-link">3450</a> · <a href="https://github.com/advisories/GHSA-9j59-75qj-795w" target="_blank" class="ref-link">GHSA-9j59-75qj-795w</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 9.0.1</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2022-45198</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://bugs.gentoo.org/855683" target="_blank" class="ref-link">855683</a> · <a href="https://github.com/python-pillow/Pillow/commit/11918eac0628ec8ac0812670d9838361ead2d6a4" target="_blank" class="ref-link">11918eac0628ec8ac0812670d98383</a> · <a href="https://github.com/python-pillow/Pillow/pull/6402" target="_blank" class="ref-link">6402</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 11918eac0628ec8ac0812670d9838361ead2d6a4</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-44271</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://devhub.checkmarx.com/cve-details/CVE-2023-44271/" target="_blank" class="ref-link"></a> · <a href="https://github.com/python-pillow/Pillow/pull/7244" target="_blank" class="ref-link">7244</a> · <a href="https://github.com/python-pillow/Pillow/commit/1fe1bb49c452b0318cad12ea9d97c3bef188e9a7" target="_blank" class="ref-link">1fe1bb49c452b0318cad12ea9d97c3</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 1fe1bb49c452b0318cad12ea9d97c3bef188e9a7</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2025-27516</span>
+          <span class="package-name">Jinja2</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Jinja2 vulnerable to sandbox breakout through attr filter selecting format method</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>from_string</code><code>Template</code><code>Environment</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>90%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/pallets/jinja/security/advisories/GHSA-cpwx-vrp4-4pq7" target="_blank" class="ref-link">GHSA-cpwx-vrp4-4pq7</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-27516" target="_blank" class="ref-link">CVE-2025-27516</a> · <a href="https://github.com/pallets/jinja/commit/90457bbf33b8662926ae65cdde4c4c32e756e403" target="_blank" class="ref-link">90457bbf33b8662926ae65cdde4c4c</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Jinja2 ≥ 3.1.6</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-56201</span>
+          <span class="package-name">Jinja2</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Jinja has a sandbox breakout through malicious filenames</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>from_string</code><code>Template</code><code>Environment</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>90%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/pallets/jinja/security/advisories/GHSA-gmj6-6f8f-6699" target="_blank" class="ref-link">GHSA-gmj6-6f8f-6699</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-56201" target="_blank" class="ref-link">CVE-2024-56201</a> · <a href="https://github.com/pallets/jinja/issues/1792" target="_blank" class="ref-link">1792</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Jinja2 ≥ 3.1.5</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-22195</span>
+          <span class="package-name">Jinja2</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Jinja vulnerable to HTML attribute injection when passing user input as keys to xmlattr filter</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>from_string</code><code>Template</code><code>Environment</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>90%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/pallets/jinja/security/advisories/GHSA-h5c8-rqwp-cp95" target="_blank" class="ref-link">GHSA-h5c8-rqwp-cp95</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-22195" target="_blank" class="ref-link">CVE-2024-22195</a> · <a href="https://github.com/pallets/jinja/commit/716795349a41d4983a9a4771f7d883c96ea17be7" target="_blank" class="ref-link">716795349a41d4983a9a4771f7d883</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Jinja2 ≥ 3.1.3</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-34064</span>
+          <span class="package-name">Jinja2</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Jinja vulnerable to HTML attribute injection when passing user input as keys to xmlattr filter</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>from_string</code><code>Template</code><code>Environment</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>90%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/pallets/jinja/security/advisories/GHSA-h75v-3vvj-5mfj" target="_blank" class="ref-link">GHSA-h75v-3vvj-5mfj</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-34064" target="_blank" class="ref-link">CVE-2024-34064</a> · <a href="https://github.com/pallets/jinja/commit/0668239dc6b44ef38e7a6c9f91f312fd4ca581cb" target="_blank" class="ref-link">0668239dc6b44ef38e7a6c9f91f312</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Jinja2 ≥ 3.1.4</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-56326</span>
+          <span class="package-name">Jinja2</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Jinja has a sandbox breakout through indirect reference to format method</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>from_string</code><code>Template</code><code>Environment</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>90%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/pallets/jinja/security/advisories/GHSA-q2x7-8rv6-6q7h" target="_blank" class="ref-link">GHSA-q2x7-8rv6-6q7h</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-56326" target="_blank" class="ref-link">CVE-2024-56326</a> · <a href="https://github.com/pallets/jinja/commit/48b0687e05a5466a91cd5812d604fa37ad0943b4" target="_blank" class="ref-link">48b0687e05a5466a91cd5812d604fa</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="render_dashboard">render_dashboard</span><span class="path-arrow">→</span><span class="path-node sink" title="env.from_string">from_string</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Jinja2 ≥ 3.1.5</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-47081</span>
+          <span class="package-name">requests</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Requests vulnerable to .netrc credentials leak via malicious URLs</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>requests.request</code><code>requests.patch</code><code>requests.Session</code><code>requests.delete</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/psf/requests/security/advisories/GHSA-9hjg-9r4m-mvj7" target="_blank" class="ref-link">GHSA-9hjg-9r4m-mvj7</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-47081" target="_blank" class="ref-link">CVE-2024-47081</a> · <a href="https://github.com/psf/requests/pull/6965" target="_blank" class="ref-link">6965</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>requests ≥ 2.32.4</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2024-35195</span>
+          <span class="package-name">requests</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Requests `Session` object does not verify requests after making first request with verify=False</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>requests.request</code><code>requests.patch</code><code>requests.Session</code><code>requests.delete</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56" target="_blank" class="ref-link">GHSA-9wx4-h78v-vm56</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-35195" target="_blank" class="ref-link">CVE-2024-35195</a> · <a href="https://github.com/psf/requests/pull/6655" target="_blank" class="ref-link">6655</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>requests ≥ 2.32.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2026-25645</span>
+          <span class="package-name">requests</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Requests has Insecure Temp File Reuse in its extract_zipped_paths() utility function</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>requests.request</code><code>requests.utils.extract_zipped_paths</code><code>requests.patch</code><code>requests.Session</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/psf/requests/security/advisories/GHSA-gc5v-m9x4-r6x2" target="_blank" class="ref-link">GHSA-gc5v-m9x4-r6x2</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-25645" target="_blank" class="ref-link">CVE-2026-25645</a> · <a href="https://github.com/psf/requests/commit/66d21cb07bd6255b1280291c4fafb71803cdb3b7" target="_blank" class="ref-link">66d21cb07bd6255b1280291c4fafb7</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>requests ≥ 2.33.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-32681</span>
+          <span class="package-name">requests</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Unintended leak of Proxy-Authorization header in requests</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>requests.request</code><code>requests.patch</code><code>requests.Session</code><code>requests.delete</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/psf/requests/security/advisories/GHSA-j8r2-6x86-q33q" target="_blank" class="ref-link">GHSA-j8r2-6x86-q33q</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-32681" target="_blank" class="ref-link">CVE-2023-32681</a> · <a href="https://github.com/psf/requests/commit/74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5" target="_blank" class="ref-link">74ea7cf7a6a27a4eeb2ae24e162bcc</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>requests ≥ 2.31.0</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="high" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2023-32681</span>
+          <span class="package-name">requests</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-critical">Priority: CRITICAL</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>requests.request</code><code>requests.patch</code><code>requests.Session</code><code>requests.delete</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/psf/requests/security/advisories/GHSA-j8r2-6x86-q33q" target="_blank" class="ref-link">GHSA-j8r2-6x86-q33q</a> · <a href="https://github.com/psf/requests/releases/tag/v2.31.0" target="_blank" class="ref-link">v2.31.0</a> · <a href="https://github.com/psf/requests/commit/74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5" target="_blank" class="ref-link">74ea7cf7a6a27a4eeb2ae24e162bcc</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div><div class="path-row"><span class="path-node entry" title="__main__">__main__</span><span class="path-arrow">→</span><span class="path-node mid" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="fetch_data">fetch_data</span><span class="path-arrow">→</span><span class="path-node sink" title="requests.get">get</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>requests ≥ 74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="vuln-card reachable" data-severity="unknown" data-status="reachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">PYSEC-2023-175</span>
+          <span class="package-name">Pillow</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-unknown">UNKNOWN</span>
+          <span class="badge status-reach">REACHABLE</span>
+          <span class="badge sev-medium">Priority: MEDIUM</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">No summary available</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>Image.frombytes</code><code>Image.open</code><code>Image.frombuffer</code><code>Image.fromstring</code></span>
+          </div>
+          
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://github.com/python-pillow/Pillow/blob/main/CHANGES.rst#1001-2023-09-15" target="_blank" class="ref-link">CHANGES.rst#1001-2023-09-15</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-5129" target="_blank" class="ref-link">CVE-2023-5129</a> · <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-4863" target="_blank" class="ref-link">CVE-2023-4863</a></span></div>
+          <div class="paths-box"><div class="paths-title">Execution Path(s)</div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="generate_thumbnail">generate_thumbnail</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div><div class="path-row"><span class="path-node entry" title="main">main</span><span class="path-arrow">→</span><span class="path-node mid" title="run_pipeline">run_pipeline</span><span class="path-arrow">→</span><span class="path-node mid" title="process_image">process_image</span><span class="path-arrow">→</span><span class="path-node sink" title="Image.open">open</span></div></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>Pillow ≥ 10.0.1</strong></div>
+        </div>
+      </div>
+    </div></div><div class="section-title">✅ Unreachable Vulnerabilities — No Action Required</div><div class="vuln-list">
+    <div class="vuln-card unreachable" data-severity="high" data-status="unreachable">
+      <div class="card-header">
+        <div class="card-left">
+          <span class="cve-badge">CVE-2021-34141</span>
+          <span class="package-name">numpy</span>
+        </div>
+        <div class="card-right">
+          <span class="badge sev-high">HIGH</span>
+          <span class="badge status-unreach">UNREACHABLE</span>
+          <span class="badge sev-low">Priority: LOW</span>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <p class="summary">Incorrect Comparison in NumPy</p>
+          <div class="detail-row">
+            <span class="detail-label">Vuln Functions</span>
+            <span class="detail-value"><code>np.load</code><code>numpy.fromstring</code><code>numpy.load</code></span>
+          </div>
+          <div class="detail-row"><span class="detail-label">CVSS Score</span><span class="detail-value"><code>7.0/10.0</code></span></div>
+          <div class="detail-row"><span class="detail-label">Match Confidence</span><span class="detail-value"><code>100%</code></span></div>
+          <div class="detail-row"><span class="detail-label">References</span><span><a href="https://nvd.nist.gov/vuln/detail/CVE-2021-34141" target="_blank" class="ref-link">CVE-2021-34141</a> · <a href="https://github.com/numpy/numpy/issues/18993" target="_blank" class="ref-link">18993</a> · <a href="https://github.com/numpy/numpy/issues/18993#issuecomment-1010735102" target="_blank" class="ref-link">18993#issuecomment-1010735102</a></span></div>
+          <div class="paths-box"><div class="paths-title">Sink Analysis</div>Sink(s) present in graph but <strong>not reachable</strong> from any entry point: <code>load</code></div>
+          <div class="fix-hint">💡 Fix: Upgrade to <strong>numpy ≥ 1.22</strong></div>
+        </div>
+      </div>
+    </div></div>
+  <div class="graph-section">
+    <div class="section-title">📊 Static Call Graph Visualization</div>
+    <div class="graph-container">
+      <div class="graph-header">
+        <h3>Function Call Graph</h3>
+        <div class="graph-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Entry Point</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#8892a8"></div>Internal</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--critical)"></div>External Sink</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--low)"></div>Unreachable</div>
+        </div>
+      </div>
+      <svg id="callgraph"></svg>
+    </div>
+  </div>
+</div>
+<footer class="footer">
+  ReachScan v2.0 · Automated Reachability Analysis for Dependency Security<br>
+  <span>False positives suppressed: 1 · Engine: NetworkX + AST · Source: OSV.dev</span>
+</footer>
+<script>
+// ── Animated counters ──
+document.querySelectorAll('.stat-number[data-count]').forEach(el=>{
+  const target=parseInt(el.dataset.count)||0;
+  const textVal=el.dataset.text;
+  if(el.classList.contains('data-text')){el.textContent=textVal||'—';return}
+  let current=0;const step=Math.max(1,Math.ceil(target/30));
+  const timer=setInterval(()=>{current+=step;if(current>=target){current=target;clearInterval(timer)}el.textContent=current},40);
+});
+// ── Card expand/collapse ──
+document.querySelectorAll('.card-header').forEach(h=>{
+  h.addEventListener('click',()=>h.closest('.vuln-card').classList.toggle('expanded'));
+});
+// ── Search ──
+document.getElementById('searchBox').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  document.querySelectorAll('.vuln-card').forEach(c=>{
+    c.style.display=c.textContent.toLowerCase().includes(q)?'':'none';
+  });
+});
+// ── Filter ──
+let activeFilter='all';
+function setFilter(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active','active-critical','active-safe'));
+  btn.classList.add(f==='reachable'?'active-critical':f==='unreachable'?'active-safe':'active');
+  document.querySelectorAll('.vuln-card').forEach(c=>{
+    const isReach=c.classList.contains('reachable');
+    const sev=c.dataset.severity||'';
+    let show=true;
+    if(f==='reachable')show=isReach;
+    else if(f==='unreachable')show=!isReach;
+    else if(f==='critical')show=sev==='critical';
+    else if(f==='high')show=sev==='high';
+    c.style.display=show?'':'none';
+  });
+}
+// ── D3.js Call Graph ──
+const graphData=JSON.parse('{"node_count": 34, "edge_count": 31, "entry_points": ["run_pipeline", "main", "__main__"], "external_sinks": ["yaml.load", "numpy.load", "numpy.mean", "Image.open", "requests.get", "requests.post", "jinja2.Environment", "jinja2.select_autoescape"], "stats": {"density": 0.0276, "connected_components": 4, "isolated_nodes": 1, "max_fan_out": 7, "max_fan_out_node": "run_pipeline"}, "nodes": [{"id": "load_config", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/config.py", "line": 14}, {"id": "validate_config", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/config.py", "line": 30}, {"id": "startup_check", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/app.py", "line": 33}, {"id": "run_pipeline", "type": "entry", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/app.py", "line": 43}, {"id": "main", "type": "entry", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/app.py", "line": 112}, {"id": "load_model_weights", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/data_processor.py", "line": 19}, {"id": "batch_process", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/data_processor.py", "line": 37}, {"id": "_internal_helper", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/data_processor.py", "line": 55}, {"id": "process_image", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/image_handler.py", "line": 17}, {"id": "generate_thumbnail", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/image_handler.py", "line": 46}, {"id": "fetch_data", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/web_utils.py", "line": 16}, {"id": "post_report", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/web_utils.py", "line": 36}, {"id": "render_dashboard", "type": "internal", "file": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app/web_utils.py", "line": 47}, {"id": "__main__", "type": "entry", "file": "", "line": 0}, {"id": "yaml.load", "type": "external", "file": "", "line": 0}, {"id": "config.keys", "type": "unresolved", "file": "", "line": 0}, {"id": "parser.add_argument", "type": "unresolved", "file": "", "line": 0}, {"id": "parser.parse_args", "type": "unresolved", "file": "", "line": 0}, {"id": "results.items", "type": "unresolved", "file": "", "line": 0}, {"id": "numpy.load", "type": "external", "file": "", "line": 0}, {"id": "fname.endswith", "type": "unresolved", "file": "", "line": 0}, {"id": "results.append", "type": "unresolved", "file": "", "line": 0}, {"id": "numpy.mean", "type": "external", "file": "", "line": 0}, {"id": "Image.open", "type": "external", "file": "", "line": 0}, {"id": "img.convert", "type": "unresolved", "file": "", "line": 0}, {"id": "img.thumbnail", "type": "unresolved", "file": "", "line": 0}, {"id": "requests.get", "type": "external", "file": "", "line": 0}, {"id": "response.raise_for_status", "type": "unresolved", "file": "", "line": 0}, {"id": "response.json", "type": "unresolved", "file": "", "line": 0}, {"id": "requests.post", "type": "external", "file": "", "line": 0}, {"id": "jinja2.Environment", "type": "external", "file": "", "line": 0}, {"id": "env.from_string", "type": "unresolved", "file": "", "line": 0}, {"id": "template.render", "type": "unresolved", "file": "", "line": 0}, {"id": "jinja2.select_autoescape", "type": "external", "file": "", "line": 0}], "edges": [{"from": "load_config", "to": "yaml.load"}, {"from": "validate_config", "to": "config.keys"}, {"from": "run_pipeline", "to": "render_dashboard"}, {"from": "run_pipeline", "to": "load_config"}, {"from": "run_pipeline", "to": "validate_config"}, {"from": "run_pipeline", "to": "process_image"}, {"from": "run_pipeline", "to": "generate_thumbnail"}, {"from": "run_pipeline", "to": "fetch_data"}, {"from": "run_pipeline", "to": "post_report"}, {"from": "main", "to": "parser.add_argument"}, {"from": "main", "to": "parser.parse_args"}, {"from": "main", "to": "run_pipeline"}, {"from": "main", "to": "results.items"}, {"from": "load_model_weights", "to": "numpy.load"}, {"from": "batch_process", "to": "fname.endswith"}, {"from": "batch_process", "to": "numpy.load"}, {"from": "batch_process", "to": "results.append"}, {"from": "_internal_helper", "to": "numpy.mean"}, {"from": "process_image", "to": "Image.open"}, {"from": "process_image", "to": "img.convert"}, {"from": "generate_thumbnail", "to": "Image.open"}, {"from": "generate_thumbnail", "to": "img.thumbnail"}, {"from": "fetch_data", "to": "requests.get"}, {"from": "fetch_data", "to": "response.raise_for_status"}, {"from": "fetch_data", "to": "response.json"}, {"from": "post_report", "to": "requests.post"}, {"from": "render_dashboard", "to": "jinja2.Environment"}, {"from": "render_dashboard", "to": "env.from_string"}, {"from": "render_dashboard", "to": "template.render"}, {"from": "render_dashboard", "to": "jinja2.select_autoescape"}, {"from": "__main__", "to": "main"}]}');
+(function(){
+  const svg=document.getElementById('callgraph');
+  const rect=svg.getBoundingClientRect();
+  const W=rect.width||1000,H=500;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const ns='http://www.w3.org/2000/svg';
+  // Arrowhead
+  const defs=document.createElementNS(ns,'defs');
+  defs.innerHTML='<marker id="ah" viewBox="0 0 10 6" refX="22" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6" fill="#4a5268"/></marker>';
+  svg.appendChild(defs);
+  const nodes=graphData.nodes||[];
+  const edges=graphData.edges||[];
+  if(!nodes.length)return;
+  // Simple force layout
+  const nodeMap={};
+  nodes.forEach((n,i)=>{
+    n.x=W/2+(Math.random()-0.5)*W*0.6;
+    n.y=H/2+(Math.random()-0.5)*H*0.6;
+    n.vx=0;n.vy=0;
+    nodeMap[n.id]=n;
+  });
+  // Entry points on left
+  const entries=nodes.filter(n=>n.type==='entry');
+  entries.forEach((n,i)=>{n.x=80;n.y=H/(entries.length+1)*(i+1)});
+  const externals=nodes.filter(n=>n.type==='external');
+  externals.forEach((n,i)=>{n.x=W-100;n.y=H/(externals.length+1)*(i+1)});
+  // Simple force simulation (no d3 dependency)
+  for(let iter=0;iter<120;iter++){
+    // Repulsion
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        let dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y;
+        let d=Math.sqrt(dx*dx+dy*dy)||1;
+        let f=800/(d*d);
+        nodes[i].vx-=dx/d*f;nodes[i].vy-=dy/d*f;
+        nodes[j].vx+=dx/d*f;nodes[j].vy+=dy/d*f;
+      }
+    }
+    // Attraction (edges)
+    edges.forEach(e=>{
+      const s=nodeMap[e.from],t=nodeMap[e.to];
+      if(!s||!t)return;
+      let dx=t.x-s.x,dy=t.y-s.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      let f=(d-120)*0.01;
+      s.vx+=dx/d*f;s.vy+=dy/d*f;
+      t.vx-=dx/d*f;t.vy-=dy/d*f;
+    });
+    // Apply
+    nodes.forEach(n=>{
+      if(n.type==='entry'||n.type==='external')return; // pin entry/external
+      n.vx*=0.7;n.vy*=0.7;
+      n.x+=n.vx;n.y+=n.vy;
+      n.x=Math.max(60,Math.min(W-60,n.x));
+      n.y=Math.max(30,Math.min(H-30,n.y));
+    });
+  }
+  // Draw edges
+  edges.forEach(e=>{
+    const s=nodeMap[e.from],t=nodeMap[e.to];
+    if(!s||!t)return;
+    const line=document.createElementNS(ns,'line');
+    line.setAttribute('x1',s.x);line.setAttribute('y1',s.y);
+    line.setAttribute('x2',t.x);line.setAttribute('y2',t.y);
+    line.setAttribute('stroke','#2e3240');line.setAttribute('stroke-width','1.5');
+    line.setAttribute('marker-end','url(#ah)');
+    svg.appendChild(line);
+  });
+  // Draw nodes
+  const colors={entry:'#6c8cff',internal:'#5a6278',external:'#ff4d6a',unresolved:'#3a3f50'};
+  nodes.forEach(n=>{
+    const g=document.createElementNS(ns,'g');
+    g.setAttribute('transform',`translate(${n.x},${n.y})`);
+    const c=document.createElementNS(ns,'circle');
+    const r=n.type==='entry'?10:n.type==='external'?9:7;
+    c.setAttribute('r',r);
+    c.setAttribute('fill',colors[n.type]||'#5a6278');
+    c.setAttribute('stroke',n.type==='entry'?'rgba(108,140,255,0.4)':n.type==='external'?'rgba(255,77,106,0.4)':'none');
+    c.setAttribute('stroke-width','3');
+    c.style.cursor='pointer';
+    g.appendChild(c);
+    const t=document.createElementNS(ns,'text');
+    t.textContent=n.id.split('.').pop();
+    t.setAttribute('text-anchor','middle');t.setAttribute('dy',-r-5);
+    t.setAttribute('fill',n.type==='external'?'#ff8c9a':n.type==='entry'?'#8eaaff':'#8892a8');
+    t.setAttribute('font-size','10');t.setAttribute('font-family','Inter,sans-serif');
+    t.setAttribute('font-weight','600');
+    g.appendChild(t);
+    // Hover effect
+    g.addEventListener('mouseenter',()=>{c.setAttribute('r',r+3);c.setAttribute('stroke-width','5')});
+    g.addEventListener('mouseleave',()=>{c.setAttribute('r',r);c.setAttribute('stroke-width','3')});
+    svg.appendChild(g);
+  });
+})();
+</script>
+</body>
+</html>

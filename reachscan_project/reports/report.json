@@ -1,0 +1,583 @@
+{
+  "meta": {
+    "target": "/home/sanjayan/Desktop/Reach_scan/reachscan_project/vuln_app",
+    "timestamp": "2026-05-06 21:58:21",
+    "engine": "ReachScan v2.0"
+  },
+  "summary": {
+    "total_cves": 5,
+    "reachable": 4,
+    "unreachable": 1
+  },
+  "vulnerabilities": [
+    {
+      "cve_id": "CVE-2020-14343",
+      "package": "PyYAML",
+      "severity": "CRITICAL",
+      "priority": "CRITICAL",
+      "status": "REACHABLE",
+      "is_reachable": true,
+      "summary": "PyYAML yaml.load() without Loader is susceptible to arbitrary code execution via a crafted YAML payload.",
+      "vulnerable_functions": [
+        "yaml.load",
+        "yaml.unsafe_load"
+      ],
+      "reachable_via": [
+        "yaml.load"
+      ],
+      "execution_paths": [
+        [
+          "run_pipeline",
+          "load_config",
+          "yaml.load"
+        ],
+        [
+          "main",
+          "run_pipeline",
+          "load_config",
+          "yaml.load"
+        ],
+        [
+          "__main__",
+          "main",
+          "run_pipeline",
+          "load_config",
+          "yaml.load"
+        ]
+      ],
+      "unreachable_sinks": [],
+      "missing_sinks": [
+        "yaml.unsafe_load"
+      ],
+      "match_confidence": 1.0,
+      "cvss_score": 9.8,
+      "fixed_version": "5.4",
+      "references": [
+        "https://github.com/yaml/pyyaml/issues/420"
+      ]
+    },
+    {
+      "cve_id": "CVE-2022-22817",
+      "package": "Pillow",
+      "severity": "HIGH",
+      "priority": "CRITICAL",
+      "status": "REACHABLE",
+      "is_reachable": true,
+      "summary": "Pillow PIL.Image.open is vulnerable to a decompression bomb attack leading to denial of service.",
+      "vulnerable_functions": [
+        "Image.open",
+        "Image.frombuffer"
+      ],
+      "reachable_via": [
+        "Image.open"
+      ],
+      "execution_paths": [
+        [
+          "run_pipeline",
+          "process_image",
+          "Image.open"
+        ],
+        [
+          "run_pipeline",
+          "generate_thumbnail",
+          "Image.open"
+        ],
+        [
+          "main",
+          "run_pipeline",
+          "process_image",
+          "Image.open"
+        ]
+      ],
+      "unreachable_sinks": [],
+      "missing_sinks": [
+        "Image.frombuffer"
+      ],
+      "match_confidence": 1.0,
+      "cvss_score": 7.5,
+      "fixed_version": "9.0.1",
+      "references": [
+        "https://pillow.readthedocs.io/en/stable/releasenotes/9.0.1.html"
+      ]
+    },
+    {
+      "cve_id": "CVE-2024-34064",
+      "package": "Jinja2",
+      "severity": "MEDIUM",
+      "priority": "HIGH",
+      "status": "REACHABLE",
+      "is_reachable": true,
+      "summary": "Jinja2 Template rendering is vulnerable to XSS via the xmlattr filter when keys contain certain characters.",
+      "vulnerable_functions": [
+        "Template",
+        "Environment"
+      ],
+      "reachable_via": [
+        "jinja2.Environment"
+      ],
+      "execution_paths": [
+        [
+          "run_pipeline",
+          "render_dashboard",
+          "jinja2.Environment"
+        ],
+        [
+          "main",
+          "run_pipeline",
+          "render_dashboard",
+          "jinja2.Environment"
+        ],
+        [
+          "__main__",
+          "main",
+          "run_pipeline",
+          "render_dashboard",
+          "jinja2.Environment"
+        ]
+      ],
+      "unreachable_sinks": [],
+      "missing_sinks": [
+        "Template"
+      ],
+      "match_confidence": 0.9,
+      "cvss_score": 5.4,
+      "fixed_version": "3.1.4",
+      "references": [
+        "https://github.com/pallets/jinja/security/advisories/GHSA-h75v-3vvj-5mfj"
+      ]
+    },
+    {
+      "cve_id": "CVE-2023-32681",
+      "package": "requests",
+      "severity": "MEDIUM",
+      "priority": "HIGH",
+      "status": "REACHABLE",
+      "is_reachable": true,
+      "summary": "Requests library forwards proxy-authorization headers to destination servers, leaking credentials.",
+      "vulnerable_functions": [
+        "requests.get",
+        "requests.post",
+        "requests.Session"
+      ],
+      "reachable_via": [
+        "requests.post",
+        "requests.get"
+      ],
+      "execution_paths": [
+        [
+          "run_pipeline",
+          "post_report",
+          "requests.post"
+        ],
+        [
+          "main",
+          "run_pipeline",
+          "post_report",
+          "requests.post"
+        ],
+        [
+          "__main__",
+          "main",
+          "run_pipeline",
+          "post_report",
+          "requests.post"
+        ]
+      ],
+      "unreachable_sinks": [],
+      "missing_sinks": [
+        "requests.Session"
+      ],
+      "match_confidence": 1.0,
+      "cvss_score": 6.1,
+      "fixed_version": "2.31.0",
+      "references": [
+        "https://github.com/psf/requests/security/advisories/GHSA-j8r2-6x86-q33q"
+      ]
+    },
+    {
+      "cve_id": "CVE-2021-41496",
+      "package": "numpy",
+      "severity": "HIGH",
+      "priority": "LOW",
+      "status": "UNREACHABLE",
+      "is_reachable": false,
+      "summary": "NumPy numpy.load with allow_pickle=True is vulnerable to arbitrary code execution through crafted .npy files.",
+      "vulnerable_functions": [
+        "numpy.load",
+        "numpy.fromstring"
+      ],
+      "reachable_via": [],
+      "execution_paths": [],
+      "unreachable_sinks": [
+        "numpy.load"
+      ],
+      "missing_sinks": [
+        "numpy.fromstring"
+      ],
+      "match_confidence": 1.0,
+      "cvss_score": 7.8,
+      "fixed_version": "1.22.0",
+      "references": [
+        "https://github.com/numpy/numpy/issues/19000"
+      ]
+    }
+  ],
+  "call_graph": {
+    "node_count": 34,
+    "edge_count": 31,
+    "entry_points": [
+      "run_pipeline",
+      "main",
+      "__main__"
+    ],
+    "external_sinks": [
+      "yaml.load",
+      "numpy.load",
+      "numpy.mean",
+      "Image.open",
+      "requests.get",
+      "requests.post",
+      "jinja2.Environment",
+      "jinja2.select_autoescape"
+    ],
+    "stats": {
+      "density": 0.0276,
+      "connected_components": 4,
+      "isolated_nodes": 1,
+      "max_fan_out": 7,
+      "max_fan_out_node": "run_pipeline"
+    },
+    "nodes": [
+      {
+        "id": "load_config",
+        "type": "internal",
+        "file": "vuln_app/config.py",
+        "line": 14
+      },
+      {
+        "id": "validate_config",
+        "type": "internal",
+        "file": "vuln_app/config.py",
+        "line": 30
+      },
+      {
+        "id": "startup_check",
+        "type": "internal",
+        "file": "vuln_app/app.py",
+        "line": 33
+      },
+      {
+        "id": "run_pipeline",
+        "type": "entry",
+        "file": "vuln_app/app.py",
+        "line": 43
+      },
+      {
+        "id": "main",
+        "type": "entry",
+        "file": "vuln_app/app.py",
+        "line": 112
+      },
+      {
+        "id": "load_model_weights",
+        "type": "internal",
+        "file": "vuln_app/data_processor.py",
+        "line": 19
+      },
+      {
+        "id": "batch_process",
+        "type": "internal",
+        "file": "vuln_app/data_processor.py",
+        "line": 37
+      },
+      {
+        "id": "_internal_helper",
+        "type": "internal",
+        "file": "vuln_app/data_processor.py",
+        "line": 55
+      },
+      {
+        "id": "process_image",
+        "type": "internal",
+        "file": "vuln_app/image_handler.py",
+        "line": 17
+      },
+      {
+        "id": "generate_thumbnail",
+        "type": "internal",
+        "file": "vuln_app/image_handler.py",
+        "line": 46
+      },
+      {
+        "id": "fetch_data",
+        "type": "internal",
+        "file": "vuln_app/web_utils.py",
+        "line": 16
+      },
+      {
+        "id": "post_report",
+        "type": "internal",
+        "file": "vuln_app/web_utils.py",
+        "line": 36
+      },
+      {
+        "id": "render_dashboard",
+        "type": "internal",
+        "file": "vuln_app/web_utils.py",
+        "line": 47
+      },
+      {
+        "id": "__main__",
+        "type": "entry",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "yaml.load",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "config.keys",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "parser.add_argument",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "parser.parse_args",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "results.items",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "numpy.load",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "fname.endswith",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "results.append",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "numpy.mean",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "Image.open",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "img.convert",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "img.thumbnail",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "requests.get",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "response.raise_for_status",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "response.json",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "requests.post",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "jinja2.Environment",
+        "type": "external",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "env.from_string",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "template.render",
+        "type": "unresolved",
+        "file": "",
+        "line": 0
+      },
+      {
+        "id": "jinja2.select_autoescape",
+        "type": "external",
+        "file": "",
+        "line": 0
+      }
+    ],
+    "edges": [
+      {
+        "from": "load_config",
+        "to": "yaml.load"
+      },
+      {
+        "from": "validate_config",
+        "to": "config.keys"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "render_dashboard"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "load_config"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "validate_config"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "process_image"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "generate_thumbnail"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "fetch_data"
+      },
+      {
+        "from": "run_pipeline",
+        "to": "post_report"
+      },
+      {
+        "from": "main",
+        "to": "parser.add_argument"
+      },
+      {
+        "from": "main",
+        "to": "parser.parse_args"
+      },
+      {
+        "from": "main",
+        "to": "run_pipeline"
+      },
+      {
+        "from": "main",
+        "to": "results.items"
+      },
+      {
+        "from": "load_model_weights",
+        "to": "numpy.load"
+      },
+      {
+        "from": "batch_process",
+        "to": "fname.endswith"
+      },
+      {
+        "from": "batch_process",
+        "to": "numpy.load"
+      },
+      {
+        "from": "batch_process",
+        "to": "results.append"
+      },
+      {
+        "from": "_internal_helper",
+        "to": "numpy.mean"
+      },
+      {
+        "from": "process_image",
+        "to": "Image.open"
+      },
+      {
+        "from": "process_image",
+        "to": "img.convert"
+      },
+      {
+        "from": "generate_thumbnail",
+        "to": "Image.open"
+      },
+      {
+        "from": "generate_thumbnail",
+        "to": "img.thumbnail"
+      },
+      {
+        "from": "fetch_data",
+        "to": "requests.get"
+      },
+      {
+        "from": "fetch_data",
+        "to": "response.raise_for_status"
+      },
+      {
+        "from": "fetch_data",
+        "to": "response.json"
+      },
+      {
+        "from": "post_report",
+        "to": "requests.post"
+      },
+      {
+        "from": "render_dashboard",
+        "to": "jinja2.Environment"
+      },
+      {
+        "from": "render_dashboard",
+        "to": "env.from_string"
+      },
+      {
+        "from": "render_dashboard",
+        "to": "template.render"
+      },
+      {
+        "from": "render_dashboard",
+        "to": "jinja2.select_autoescape"
+      },
+      {
+        "from": "__main__",
+        "to": "main"
+      }
+    ]
+  }
+}
