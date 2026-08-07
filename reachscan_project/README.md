@@ -29,16 +29,24 @@ python reachscan/scanner.py vuln_app/ --no-network --severity HIGH
 ## Project Structure
 
 ```
-reachscan/                  ← Scanner engine
-├── scanner.py              ← CLI entry point (v2.0)
-├── requirements.txt        ← networkx only (zero extra deps)
-└── modules/
-    ├── ingestion.py        ← Module 1: OSV.dev API + multi-manifest parsing
-    ├── parser.py           ← Module 2: AST → FunctionNode + CallEdge extraction
-    ├── graph.py            ← Module 3: NetworkX DiGraph construction + DOT export
-    ├── reachability.py     ← Module 4: Package-aware DFS/BFS pathfinding
-    ├── reporter.py         ← Module 5: Interactive HTML report generator
-    └── report_template.html← Self-contained HTML template with D3.js graph
+reachscan/                  ← Scanner engine (v2.0 refactor)
+├── scanner.py              ← Thin CLI entry point
+├── config.py                ← All settings (env-overridable)
+├── requirements.txt         ← networkx only (zero extra deps)
+├── core/                    ← Engine implementations
+│   ├── parser/              ← LanguageParser interface + AST Python parser
+│   ├── graph/               ← GraphBuilder + DOT/JSON export
+│   ├── reachability/        ← ReachabilityEngine (entry→sink classification)
+│   ├── resolver/            ← Package-aware sink/import matching
+│   ├── reporting/           ← Reporter interface + HTML/JSON + template
+│   └── scoring/             ← Severity / CVSS classification
+├── providers/               ← Vulnerability data sources (OSV, mock) + manifests
+├── cache/                   ← Caching interface/manager (designed, disabled)
+├── cli/                     ← Argument parsing + thin ScanEngine orchestrator
+├── models/                  ← Plain-data dataclasses (no logic)
+├── utils/                   ← Logging + exception hierarchy
+└── tests/                   ← stdlib unittest suite (48 tests)
+    └── ARCHITECTURE (dooc): docs/ARCHITECTURE.md
 
 vuln_app/                   ← Intentionally vulnerable scan target
 ├── requirements.txt        ← Pinned to vulnerable versions
@@ -93,35 +101,43 @@ Traditional SCA would flag all 5. **ReachScan suppresses the numpy false positiv
 requirements.txt / Pipfile / pyproject.toml
        │
        ▼
-┌─────────────────┐     OSV.dev API
-│  Module 1       │◄────────────────
-│  Ingestion      │  CVE list + CVSS + fix versions
+┌─────────────────┐   ┌────────────────────┐
+│  providers/     │   │  providers/manifest │
+│  (OSV | mock)   │◄──┤  parse any manifest │
+└────────┬────────┘   └────────────────────┘
+         │
+         ▼
+┌─────────────────┐  .py files → AST
+│  core/parser/   │  FunctionNode, CallEdge, decorators
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Module 2       │  .py files → AST
-│  AST Parser     │  FunctionNode, CallEdge, decorators
+┌─────────────────┐  DiGraph (filtered)
+│  core/graph/    │  nodes=functions, edges=calls, stats
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Module 3       │  DiGraph (filtered)
-│  Call Graph     │  nodes=functions, edges=calls, stats
+┌─────────────────┐  Package-aware sink matching
+│ core/resolver/  │  import/sink knowledge
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Module 4       │  Package-aware sink matching
-│  Reachability   │  Score-based: entry_point → sink?
+┌─────────────────┐  core/scoring → severity
+│ core/reachability│  Entry.Point → Sink?
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Module 5       │  Interactive HTML + JSON
-│  Reporter       │  D3.js graph · search · filter
+┌─────────────────┐  Reporter (HTML | JSON)
+│ core/reporting/ │  Embedded graph + filter
 └─────────────────┘
 ```
+
+For full detail see **[`reachscan/docs/ARCHITECTURE.md`](reachscan/docs/ARCHITECTURE.md)** —
+architecture diagram, execution flow, module dependency graph, per-module
+explanation and the justification for every design decision.
+
+`cli/pipeline.py` is the only coordinator; `scanner.py` is a thin entry point.
+All reachability/parsing/scoring logic is isolated in `core/` and `providers/`.
 
 ---
 
