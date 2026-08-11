@@ -1,4 +1,4 @@
-# ReachScan v2.0 — Automated Reachability Analysis for Dependency Security
+# ReachScan v2.0 — Automated Reachability Analysis for Dependency Security -- only demo version given, working on the product.
 
 **Static call graph analysis engine that classifies CVEs as Reachable (must fix)
 or Unreachable (skip), dramatically reducing SCA alert fatigue.**
