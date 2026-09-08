@@ -1,4 +1,3 @@
-
 import os
 import sys
 import argparse
@@ -13,7 +12,6 @@ from web_utils import fetch_data, post_report, render_dashboard
 import data_processor  # noqa: F401  (imported, not called)
 
 
-# ─── Application constants ────────────────────────────────────────────────────
 
 CONFIG_FILE   = "config.yaml"
 SAMPLE_IMAGE  = "sample.jpg"
