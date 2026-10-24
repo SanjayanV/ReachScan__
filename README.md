@@ -56,23 +56,6 @@ vuln_app/                   ← Intentionally vulnerable scan target
 ├── web_utils.py            ← requests + Jinja2 Environment    [CVE-2023-32681, CVE-2024-34064]
 └── data_processor.py       ← numpy.load allow_pickle=True     [CVE-2021-41496]
 ```
-
----
-
-## Expected Demo Results (offline mode)
-
-| CVE | Package | Severity | CVSS | Sink | Status |
-|-----|---------|----------|------|------|--------|
-| CVE-2020-14343 | PyYAML | CRITICAL | 9.8 | `yaml.load` | 🔴 **REACHABLE** — `main → run_pipeline → load_config → yaml.load` |
-| CVE-2022-22817 | Pillow | HIGH | 7.5 | `Image.open` | 🔴 **REACHABLE** — `main → run_pipeline → process_image → Image.open` |
-| CVE-2024-34064 | Jinja2 | MEDIUM | 5.4 | `Environment` | 🔴 **REACHABLE** — `main → run_pipeline → render_dashboard → Environment` |
-| CVE-2023-32681 | requests | MEDIUM | 6.1 | `requests.get` | 🔴 **REACHABLE** — `main → run_pipeline → fetch_data → requests.get` |
-| CVE-2021-41496 | numpy | HIGH | 7.8 | `numpy.load` | ✅ **UNREACHABLE** — `batch_process` never called from `main` |
-
-Traditional SCA would flag all 5. **ReachScan suppresses the numpy false positive → 20% alert reduction.**
-
----
-
 ## v2.0 Improvements
 
 ### Critical Bug Fixes
